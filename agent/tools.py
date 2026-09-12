@@ -1,6 +1,6 @@
-from typing import Optional, List
-import json
 import tiktoken
+import json
+from typing import Optional, List
 from scraper.browser_handler import BrowserHandler
 from scraper.content_extractor import ContentExtractor
 from llm.llm_client import OllamaClient
@@ -8,41 +8,41 @@ from llm.structured_output import CompanyEnrichment
 from config.settings import settings
 from utils.logger import get_logger
 
-logger = get_logger(__name__)
-encoding = tiktoken.get_encoding("cl100k_base")
+logger=get_logger(__name__)
+encoding=tiktoken.get_encoding("cl100k_base")
 
 
 async def scrape_domain(browser: BrowserHandler, domain: str) -> tuple[Optional[str], List[str]]:
-    base_url = f"https://{domain}"
+    base_url=f"https://{domain}"
 
-    html = await browser.fetch_page(base_url)
+    html=await browser.fetch_page(base_url)
     if not html:
         logger.warning(f"Failed to fetch homepage for {domain}")
         return None, []
 
-    subpages = await browser.discover_subpages(base_url, html)
+    subpages=await browser.discover_subpages(base_url, html)
 
-    all_content = [html]
+    all_content=[html]
     for subpage in subpages:
-        sub_html = await browser.fetch_page(subpage)
+        sub_html=await browser.fetch_page(subpage)
         if sub_html:
             all_content.append(sub_html)
 
-    combined_html = "\n\n---PAGE BREAK---\n\n".join(all_content)
+    combined_html="\n\n---PAGE BREAK---\n\n".join(all_content)
     return combined_html, subpages
 
 
 async def extract_content(html: str) -> str:
-    extractor = ContentExtractor()
-    markdown = extractor.extract(html)
-    markdown = extractor.truncate_to_token_limit(markdown)
+    extractor=ContentExtractor()
+    markdown=extractor.extract(html)
+    markdown=extractor.truncate_to_token_limit(markdown)
     return markdown
 
 
 async def enrich_with_llm(llm_client: OllamaClient, domain: str, content: str) -> Optional[CompanyEnrichment]:
-    schema = CompanyEnrichment.model_json_schema()
+    schema=CompanyEnrichment.model_json_schema()
 
-    prompt = f"""Extract the following structured information from this company's website content:
+    prompt=f"""Extract the following structured information from this company's website content:
 
 1. Company Overview: 2-sentence summary of what they do
 2. Target Audience: Who the product is built for (ICP)
@@ -58,16 +58,16 @@ Content:
 Output ONLY valid JSON matching this schema:
 {json.dumps(schema, indent=2)}"""
 
-    input_tokens = len(encoding.encode(prompt))
-    hypothetical_cost = (input_tokens / 1000000) * 5.0
+    input_tokens=len(encoding.encode(prompt))
+    hypothetical_cost=(input_tokens / 1000000) * 5.0
     logger.info(f"Domain: {domain} | Tokens: {input_tokens} | Cost: $0.00 (Local Ollama) | (Would be ${hypothetical_cost:.4f} on GPT-4o)")
 
-    result = await llm_client.generate(prompt, schema)
+    result=await llm_client.generate(prompt, schema)
     if result:
-        result.domain = domain
-        output_tokens = len(encoding.encode(result.model_dump_json()))
-        total_tokens = input_tokens + output_tokens
-        hypothetical_cost = (total_tokens / 1000000) * 5.0
+        result.domain=domain
+        output_tokens=len(encoding.encode(result.model_dump_json()))
+        total_tokens=input_tokens+output_tokens
+        hypothetical_cost=(total_tokens / 1000000) * 5.0
         logger.info(f"Domain: {domain} | Total Tokens: {total_tokens} | Cost: $0.00 (Local Ollama) | (Would be ${hypothetical_cost:.4f} on GPT-4o)")
     return result
 
@@ -75,7 +75,7 @@ Output ONLY valid JSON matching this schema:
 async def process_domain(browser: BrowserHandler, llm_client: OllamaClient, domain: str) -> CompanyEnrichment:
     logger.info(f"Processing domain: {domain}")
 
-    html, subpages = await scrape_domain(browser, domain)
+    html, subpages=await scrape_domain(browser, domain)
 
     if not html:
         return CompanyEnrichment(
@@ -88,16 +88,14 @@ async def process_domain(browser: BrowserHandler, llm_client: OllamaClient, doma
             errors=[f"Failed to fetch {domain}"]
         )
 
-    content = await extract_content(html)
-    logger.info(f"Extracted {len(content)} chars for {domain}")
+    content=await extract_content(html)
 
-    import tiktoken
     enc=tiktoken.get_encoding("cl100k_base")
     token_count=len(enc.encode(content))
     hypothetical_cost=(token_count / 1000000) * 5.0
     logger.info(f"Domain: {domain} | Total Tokens: {token_count} | Cost: $0.00 (Local Ollama) | (Would be ${hypothetical_cost:.4f} on GPT-4o)")
 
-    enrichment = await enrich_with_llm(llm_client, domain, content)
+    enrichment=await enrich_with_llm(llm_client, domain, content)
 
     if not enrichment:
         return CompanyEnrichment(
