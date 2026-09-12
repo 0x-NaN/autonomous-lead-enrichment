@@ -12,10 +12,6 @@ logger = get_logger(__name__)
 encoding = tiktoken.get_encoding("cl100k_base")
 
 
-def estimate_cost(input_tokens: int, output_tokens: int) -> float:
-    return 0.0
-
-
 async def scrape_domain(browser: BrowserHandler, domain: str) -> tuple[Optional[str], List[str]]:
     base_url = f"https://{domain}"
 
@@ -63,13 +59,16 @@ Output ONLY valid JSON matching this schema:
 {json.dumps(schema, indent=2)}"""
 
     input_tokens = len(encoding.encode(prompt))
-    logger.info(f"Token count for {domain}: input={input_tokens}")
+    hypothetical_cost = (input_tokens / 1000000) * 5.0
+    logger.info(f"Domain: {domain} | Tokens: {input_tokens} | Cost: $0.00 (Local Ollama) | (Would be ${hypothetical_cost:.4f} on GPT-4o)")
 
     result = await llm_client.generate(prompt, schema)
     if result:
         result.domain = domain
         output_tokens = len(encoding.encode(result.model_dump_json()))
-        logger.info(f"Token count for {domain}: output={output_tokens}, estimated_cost=${estimate_cost(input_tokens, output_tokens):.6f}")
+        total_tokens = input_tokens + output_tokens
+        hypothetical_cost = (total_tokens / 1000000) * 5.0
+        logger.info(f"Domain: {domain} | Total Tokens: {total_tokens} | Cost: $0.00 (Local Ollama) | (Would be ${hypothetical_cost:.4f} on GPT-4o)")
     return result
 
 
