@@ -91,6 +91,12 @@ async def process_domain(browser: BrowserHandler, llm_client: OllamaClient, doma
     content = await extract_content(html)
     logger.info(f"Extracted {len(content)} chars for {domain}")
 
+    import tiktoken
+    enc=tiktoken.get_encoding("cl100k_base")
+    token_count=len(enc.encode(content))
+    hypothetical_cost=(token_count / 1000000) * 5.0
+    logger.info(f"Domain: {domain} | Total Tokens: {token_count} | Cost: $0.00 (Local Ollama) | (Would be ${hypothetical_cost:.4f} on GPT-4o)")
+
     enrichment = await enrich_with_llm(llm_client, domain, content)
 
     if not enrichment:

@@ -49,18 +49,19 @@ class OllamaClient:
             result = response.json()
             raw_output = result.get("response", "")
 
-            logger.debug(f"Raw LLM output: {raw_output[:500]}...")
+            import re
+            raw_output = re.sub(r'^```json\s*', '', raw_output, flags=re.MULTILINE)
+            raw_output = re.sub(r'\s*```$', '', raw_output, flags=re.MULTILINE)
+            raw_output = raw_output.strip()
 
-            cleaned_output = self._clean_json_output(raw_output)
-            parsed = json.loads(cleaned_output)
+            parsed = json.loads(raw_output)
             return CompanyEnrichment(**parsed)
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse LLM JSON output: {e}")
-            logger.error(f"Raw output: {raw_output}")
             return None
         except httpx.HTTPStatusError as e:
-            logger.error(f"Ollama HTTP error: {e.response.status_code} - {e.response.text}")
+            logger.error(f"Ollama HTTP error: {e.response.status_code}")
             return None
         except Exception as e:
             logger.error(f"Ollama error: {e}")
