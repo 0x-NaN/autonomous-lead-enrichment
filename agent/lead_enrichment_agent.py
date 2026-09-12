@@ -16,7 +16,7 @@ class LeadEnrichmentAgent:
 
     async def initialize(self) -> bool:
         await self.browser.start()
-        
+
         model_exists = await self.llm_client.check_model()
         if not model_exists:
             logger.info(f"Model {settings.OLLAMA_MODEL} not found, pulling...")
@@ -24,7 +24,7 @@ class LeadEnrichmentAgent:
             if not success:
                 logger.error("Failed to pull model")
                 return False
-        
+
         logger.info("Agent initialized successfully")
         return True
 
@@ -35,14 +35,14 @@ class LeadEnrichmentAgent:
     async def run(self, domains: List[str] = None) -> List[CompanyEnrichment]:
         if domains is None:
             domains = settings.TARGET_DOMAINS
-        
+
         results = []
-        
+
         for domain in domains:
             domain = domain.strip()
             if not domain:
                 continue
-            
+
             try:
                 result = await process_domain(self.browser, self.llm_client, domain)
                 results.append(result)
@@ -57,5 +57,5 @@ class LeadEnrichmentAgent:
                     data_confidence_score=0.0,
                     errors=[str(e)]
                 ))
-        
+
         return results

@@ -1,4 +1,5 @@
 import json
+import re
 import httpx
 from typing import Optional
 from config.settings import settings
@@ -17,6 +18,16 @@ class OllamaClient:
     async def close(self):
         await self.client.aclose()
 
+    def _clean_json_output(self, raw_output: str) -> str:
+        cleaned = raw_output.strip()
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:]
+        if cleaned.startswith("```"):
+            cleaned = cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        return cleaned.strip()
+
     async def generate(self, prompt: str, schema: dict) -> Optional[CompanyEnrichment]:
         payload = {
             "model": self.model,
@@ -34,15 +45,16 @@ class OllamaClient:
             logger.info(f"Calling Ollama with model: {self.model}")
             response = await self.client.post(f"{self.host}/api/generate", json=payload)
             response.raise_for_status()
-            
+
             result = response.json()
             raw_output = result.get("response", "")
-            
+
             logger.debug(f"Raw LLM output: {raw_output[:500]}...")
-            
-            parsed = json.loads(raw_output)
+
+            cleaned_output = self._clean_json_output(raw_output)
+            parsed = json.loads(cleaned_output)
             return CompanyEnrichment(**parsed)
-            
+
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse LLM JSON output: {e}")
             logger.error(f"Raw output: {raw_output}")

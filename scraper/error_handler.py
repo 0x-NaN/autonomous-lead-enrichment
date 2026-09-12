@@ -11,10 +11,10 @@ class ScraperError(Exception):
 def handle_scraper_error(error: Exception, domain: str) -> tuple[Optional[str], float]:
     from utils.logger import get_logger
     logger = get_logger(__name__)
-    
+
     error_msg = str(error)
     error_type = "unknown"
-    
+
     if "timeout" in error_msg.lower():
         error_type = "timeout"
     elif "404" in error_msg or "not found" in error_msg.lower():
@@ -25,6 +25,6 @@ def handle_scraper_error(error: Exception, domain: str) -> tuple[Optional[str], 
         error_type = "bot_block"
     elif "connection" in error_msg.lower() or "dns" in error_msg.lower():
         error_type = "connection"
-    
+
     logger.error(f"Scraper error for {domain} [{error_type}]: {error_msg}")
     return None, 0.0
